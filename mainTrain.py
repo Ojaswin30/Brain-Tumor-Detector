@@ -1,8 +1,8 @@
-import cv2
-import os
-from PIL import Image
-import numpy as np
-from sklearn.model_selection import train_test_split
+import cv2                                                                                         #used to read, resize and process images
+import os                                                                                          #Used to extract images from the folders
+from PIL import Image                                                                              #used to convert different imaage formats which may not be accepted by cv2 to acceptable formats
+import numpy as np                                                                                 #neural networks expect numpy arrays as an input to make calculations easier
+from sklearn.model_selection import train_test_split                                               
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.utils import normalize
