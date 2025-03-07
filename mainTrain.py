@@ -2,13 +2,24 @@ import cv2                                                                      
 import os                                                                                          #Used to extract images from the folders
 from PIL import Image                                                                              #used to convert different imaage formats which may not be accepted by cv2 to acceptable formats
 import numpy as np                                                                                 #neural networks expect numpy arrays as an input to make calculations easier
-from sklearn.model_selection import train_test_split                                               
+
+from sklearn.model_selection import train_test_split                                               #used to split the dataset into train dataset and test dataset
+
 import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras.utils import normalize
-from tensorflow.keras.models import Sequential
+from tensorflow import keras                                                                       #Main framework for building and training the cnn model
+
+from tensorflow.keras.utils import normalize                                                       #used to normalize pixel values (scales between 0 and 1) for better training efficiancy
+from tensorflow.keras.models import Sequential                                                     #defines the cnn model as sequential stack of layers
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Activation, Dropout, Flatten, Dense
-from keras.utils import to_categorical
+
+#conv2D - convulational layer that extracts features from mri images
+#MaxPooling2D - downsamples feature maps to reduce computation and prevent overfitting
+#Activation - adds non-linearity (eg. ReLU) to layers
+#Dropout - Randomly deactivates neurons during training to prevent overfitting
+#flatten - Converts 2D feature maps into a 1D vector for the Dense Layers
+#Dense - Fully Connected layers that make final classification predictions
+
+from keras.utils import to_categorical                                                             #converts class labels into one-hot encoding. needed for categorical classification task
 
 image_directory='Datasets/'
 
