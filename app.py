@@ -62,6 +62,7 @@ st.markdown(
         box-shadow: 0 12px 32px rgba(77, 116, 177, 0.15);
         backdrop-filter: blur(12px);
         transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+        text-decoration: none;
     }
     .home-btn:hover {
         transform: translateY(-1px);
@@ -306,8 +307,8 @@ st.markdown(
 # ─────────────────────────────────────────────
 st.markdown(
     f"""
-<a class="home-btn" href="{PORTFOLIO_URL}" target="_blank" rel="noopener noreferrer">
-    ⟵ Home
+<a class="home-btn" href="{PORTFOLIO_URL}" rel="noopener noreferrer">
+    Home
 </a>
 """,
     unsafe_allow_html=True,
