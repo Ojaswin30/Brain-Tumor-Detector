@@ -1,102 +1,171 @@
-import cv2                                                                                         #used to read, resize and process images
-import os                                                                                          #Used to extract images from the folders
-from PIL import Image                                                                              #used to convert different imaage formats which may not be accepted by cv2 to acceptable formats
-import numpy as np                                                                                 #neural networks expect numpy arrays as an input to make calculations easier
-
-from sklearn.model_selection import train_test_split                                               #used to split the dataset into train dataset and test dataset
-
+import importlib
+import os
+import numpy as np
+import matplotlib.pyplot as plt
 import tensorflow as tf
-from tensorflow import keras                                                                       #Main framework for building and training the cnn model
 
-from tensorflow.keras.utils import normalize                                                       #used to normalize pixel values (scales between 0 and 1) for better training efficiancy
-from tensorflow.keras.models import Sequential                                                     #defines the cnn model as sequential stack of layers
-from tensorflow.keras.layers import Conv2D, MaxPooling2D, Activation, Dropout, Flatten, Dense
+# from tensorflow.keras.preprocessing.image import ImageDataGenerator
+image_module = importlib.import_module("tensorflow.keras.preprocessing.image")
+ImageDataGenerator = image_module.ImageDataGenerator
+# from tensorflow.keras.models import Sequential
+Sequential_module = importlib.import_module("tensorflow.keras.models")
+Sequential = Sequential_module.Sequential
+# from tensorflow.keras.layers import Conv2D, MaxPooling2D, Dense, Flatten, Dropout, BatchNormalization
+Layers_module = importlib.import_module("tensorflow.keras.layers")
+Conv2D = Layers_module.Conv2D
+MaxPooling2D = Layers_module.MaxPooling2D
+Dense = Layers_module.Dense
+Flatten = Layers_module.Flatten
+Dropout = Layers_module.Dropout
+BatchNormalization = Layers_module.BatchNormalization
+# from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
+callbacks_module = importlib.import_module("tensorflow.keras.callbacks")
+EarlyStopping = callbacks_module.EarlyStopping
+ReduceLROnPlateau = callbacks_module.ReduceLROnPlateau
+from sklearn.metrics import classification_report, confusion_matrix
 
-#conv2D - convulational layer that extracts features from mri images
-#MaxPooling2D - downsamples feature maps to reduce computation and prevent overfitting
-#Activation - adds non-linearity (eg. ReLU) to layers
-#Dropout - Randomly deactivates neurons during training to prevent overfitting
-#flatten - Converts 2D feature maps into a 1D vector for the Dense Layers
-#Dense - Fully Connected layers that make final classification predictions
+# =========================
+# CONFIG
+# =========================
+IMG_SIZE = 128
+BATCH_SIZE = 32
+EPOCHS = 30
+DATA_DIR = "Datasets"   # make sure this contains /yes and /no folders
 
-from keras.utils import to_categorical                                                             #converts class labels into one-hot encoding. needed for categorical classification task
+# =========================
+# CHECK DATASET
+# =========================
+print("Checking dataset structure...")
+print("Classes found:", os.listdir(DATA_DIR))
 
-image_directory='Datasets/'
+# =========================
+# DATA GENERATOR (AUGMENTATION + NORMALIZATION)
+# =========================
+datagen = ImageDataGenerator(
+    rescale=1./255,
+    validation_split=0.2,
+    rotation_range=15,
+    zoom_range=0.2,
+    horizontal_flip=True
+)
 
-no_tumor_images=os.listdir(image_directory+ 'no/')
-yes_tumor_images=os.listdir(image_directory+ 'yes/')
-dataset=[]
-label=[]
+train_data = datagen.flow_from_directory(
+    DATA_DIR,
+    target_size=(IMG_SIZE, IMG_SIZE),
+    batch_size=BATCH_SIZE,
+    class_mode='binary',
+    subset='training',
+    shuffle=True
+)
 
-INPUT_SIZE=64
-#print(no_tumor_images)
+val_data = datagen.flow_from_directory(
+    DATA_DIR,
+    target_size=(IMG_SIZE, IMG_SIZE),
+    batch_size=BATCH_SIZE,
+    class_mode='binary',
+    subset='validation',
+    shuffle=False
+)
 
-for i, image_name in enumerate(no_tumor_images):
-    if(image_name.split('.')[1]=='jpg'):
-        image=cv2.imread(image_directory+'no/'+image_name)
-        image=Image.fromarray(image, 'RGB')
-        image=image.resize((INPUT_SIZE,INPUT_SIZE))
-        dataset.append(np.array(image))
-        label.append(0)
+print("Class indices:", train_data.class_indices)
 
+# =========================
+# MODEL BUILDING
+# =========================
+model = Sequential()
 
+model.add(Conv2D(32, (3,3), activation='relu', input_shape=(IMG_SIZE, IMG_SIZE, 3)))
+model.add(BatchNormalization())
+model.add(MaxPooling2D(2,2))
 
-for i, image_name in enumerate(yes_tumor_images):
-    if(image_name.split('.')[1]=='jpg'):
-        image=cv2.imread(image_directory+'yes/'+image_name)
-        image=Image.fromarray(image, 'RGB')
-        image=image.resize((INPUT_SIZE,INPUT_SIZE))
-        dataset.append(np.array(image))
-        label.append(1)
+model.add(Conv2D(64, (3,3), activation='relu'))
+model.add(BatchNormalization())
+model.add(MaxPooling2D(2,2))
 
-
-
-#convert dataset to numpy array
-dataset=np.array(dataset)
-label=np.array(label)
-
-
-
-x_train, x_test, y_train, y_test=train_test_split(dataset, label, test_size=0.2, random_state=0)
-
-
-
-
-x_train=normalize(x_train, axis=1)
-x_test=normalize(x_test, axis=1)
-
-# y_train=to_categorical(y_train, num_classes=2)
-# y_test=to_categorical(y_test, num_classes=2)
-
-
-# Model Building
-
-model=Sequential()
-
-model.add(Conv2D(32,(3,3), input_shape=(INPUT_SIZE, INPUT_SIZE, 3)))
-model.add(Activation('relu'))
-model.add(MaxPooling2D(pool_size=(2,2,)))
-
-model.add(Conv2D(32,(3,3), kernel_initializer='he_uniform'))
-model.add(Activation('relu'))
-model.add(MaxPooling2D(pool_size=(2,2,)))
-
-model.add(Conv2D(64,(3,3), kernel_initializer='he_uniform'))
-model.add(Activation('relu'))
-model.add(MaxPooling2D(pool_size=(2,2,)))
-
+model.add(Conv2D(128, (3,3), activation='relu'))
+model.add(BatchNormalization())
+model.add(MaxPooling2D(2,2))
 
 model.add(Flatten())
-model.add(Dense(64))
-model.add(Activation('relu'))
+model.add(Dense(128, activation='relu'))
 model.add(Dropout(0.5))
-model.add(Dense(1))
-model.add(Activation('sigmoid'))
 
+model.add(Dense(1, activation='sigmoid'))
 
+model.summary()
 
-model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+# =========================
+# COMPILE MODEL
+# =========================
+model.compile(
+    optimizer='adam',
+    loss='binary_crossentropy',
+    metrics=['accuracy']
+)
 
-model.fit(x_train,y_train, batch_size=16, verbose=1, epochs=10, validation_data=(x_test,y_test), shuffle=False)
+# =========================
+# CALLBACKS (ANTI-OVERFITTING)
+# =========================
+early_stop = EarlyStopping(
+    monitor='val_loss',
+    patience=5,
+    restore_best_weights=True
+)
 
-model.save('BrainTumor10epochs.h5')
+lr_reduce = ReduceLROnPlateau(
+    monitor='val_loss',
+    factor=0.3,
+    patience=2,
+    verbose=1
+)
+
+# =========================
+# TRAIN MODEL
+# =========================
+history = model.fit(
+    train_data,
+    validation_data=val_data,
+    epochs=EPOCHS,
+    callbacks=[early_stop, lr_reduce]
+)
+
+# =========================
+# SAVE MODEL
+# =========================
+model.save("brain_tumor_model.h5")
+print("Model saved as brain_tumor_model.h5")
+
+# =========================
+# PLOT ACCURACY & LOSS
+# =========================
+plt.figure(figsize=(12,5))
+
+plt.subplot(1,2,1)
+plt.plot(history.history['accuracy'], label='Train Accuracy')
+plt.plot(history.history['val_accuracy'], label='Val Accuracy')
+plt.legend()
+plt.title("Accuracy")
+
+plt.subplot(1,2,2)
+plt.plot(history.history['loss'], label='Train Loss')
+plt.plot(history.history['val_loss'], label='Val Loss')
+plt.legend()
+plt.title("Loss")
+
+plt.show()
+
+# =========================
+# EVALUATION (IMPORTANT)
+# =========================
+val_data.reset()
+
+predictions = model.predict(val_data)
+predictions = (predictions > 0.5).astype(int)
+
+true_labels = val_data.classes
+
+print("\nClassification Report:")
+print(classification_report(true_labels, predictions))
+
+print("\nConfusion Matrix:")
+print(confusion_matrix(true_labels, predictions))
